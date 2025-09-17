@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+# Ensure shell scripts use LF on all platforms
+*.sh text eol=lf
+
+# Improve diffs for Python
+*.py diff=python
+
+# Docs classification for GitHub linguist
+README.md linguist-documentation
+USAGE.md linguist-documentation
+

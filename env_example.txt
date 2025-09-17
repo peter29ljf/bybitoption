@@ -1,0 +1,9 @@
+# Bybit API 配置示例
+# 将此文件复制为 .env 并填入真实的API密钥
+
+# API 密钥 (在 Bybit 官网申请)
+BYBIT_API_KEY=your_api_key_here
+BYBIT_API_SECRET=your_api_secret_here
+
+# 是否使用测试网 (true/false)
+BYBIT_TESTNET=true

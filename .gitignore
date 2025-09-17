@@ -1,0 +1,37 @@
+# Python byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments and environment files
+venv/
+.venv/
+.env
+.env.*
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Caches and logs
+.pytest_cache/
+.mypy_cache/
+.cache/
+*.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local overrides
+*.local
+
