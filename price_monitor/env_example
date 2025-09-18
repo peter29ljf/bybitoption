@@ -1,0 +1,24 @@
+# 价格监控服务配置示例
+# 复制此文件为 .env 并填入实际配置
+
+# 服务配置
+MONITOR_HOST=0.0.0.0
+MONITOR_PORT=8888
+MONITOR_DEBUG=true
+
+# Bybit配置（继承自父项目）
+BYBIT_TESTNET=true
+
+# 监控任务配置
+MAX_MONITOR_TASKS=100
+TASK_TIMEOUT_HOURS=24
+
+# Redis配置（可选）
+USE_REDIS=false
+REDIS_URL=redis://localhost:6379/0
+
+# 日志配置
+LOG_LEVEL=INFO
+LOG_FILE=price_monitor.log
+
+

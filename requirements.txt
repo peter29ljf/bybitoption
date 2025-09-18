@@ -5,3 +5,4 @@ colorama==0.4.6
 click==8.1.7
 numpy==2.3.2
 scipy==1.16.1
+flask==3.0.0

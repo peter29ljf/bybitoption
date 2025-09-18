@@ -13,15 +13,21 @@ from config import Config
 class BybitAPI:
     """Bybit API 客户端类"""
     
-    def __init__(self, api_key: str = None, api_secret: str = None):
+    def __init__(self, api_key: str = None, api_secret: str = None, *, base_url: str = None):
         """初始化 API 客户端"""
         self.api_key = api_key or Config.BYBIT_API_KEY
         self.api_secret = api_secret or Config.BYBIT_API_SECRET
-        self.base_url = Config.BYBIT_BASE_URL
+        self.base_url = base_url or Config.BYBIT_BASE_URL
         self.timeout = Config.REQUEST_TIMEOUT
         
         if not self.api_key or not self.api_secret:
             print("警告: API 密钥未设置，将只能使用公开接口")
+
+    def update_credentials(self, api_key: str, api_secret: str, base_url: str):
+        """动态更新凭证"""
+        self.api_key = api_key
+        self.api_secret = api_secret
+        self.base_url = base_url
     
     def _generate_signature(self, params: str, timestamp: str, recv_window: str) -> str:
         """生成签名"""
@@ -85,7 +91,7 @@ class BybitAPI:
             print(f"请求错误: {e}")
             return {'retCode': -1, 'retMsg': str(e)}
     
-    def get_option_chain(self, base_coin: str = 'BTC', limit: int = 200) -> Dict:
+    def get_option_chain(self, base_coin: str = 'BTC', limit: int = 1000) -> Dict:
         """获取期权链数据"""
         endpoint = '/v5/market/instruments-info'
         params = {
@@ -96,7 +102,7 @@ class BybitAPI:
         
         return self._make_request('GET', endpoint, params, signed=False)
     
-    def get_option_tickers(self, symbol: str = None, base_coin: str = 'BTC') -> Dict:
+    def get_option_tickers(self, symbol: str = None, base_coin: str = 'BTC', limit: int = 1000) -> Dict:
         """获取期权ticker数据"""
         endpoint = '/v5/market/tickers'
         params = {
@@ -107,6 +113,10 @@ class BybitAPI:
             params['symbol'] = symbol
         else:
             params['baseCoin'] = base_coin
+            
+        # 添加限制参数以获取更多数据
+        if not symbol:
+            params['limit'] = limit
             
         return self._make_request('GET', endpoint, params, signed=False)
     

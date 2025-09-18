@@ -17,8 +17,8 @@ class OptionTrader:
         """初始化期权交易"""
         self.api = api_client
     
-    def buy_option(self, symbol: str, quantity: str, order_type: str = "Market", 
-                   price: str = None) -> Dict:
+    def buy_option(self, symbol: str, quantity: str, order_type: str = "Market",
+                   price: str = None, auto_confirm: bool = False) -> Dict:
         """买入期权"""
         print(f"正在买入期权 {symbol}...")
         print(f"数量: {quantity}")
@@ -28,10 +28,11 @@ class OptionTrader:
             print(f"限价: {price}")
         
         # 确认订单
-        confirm = input(f"\n{Fore.YELLOW}确认下单? (y/N): {Style.RESET_ALL}")
-        if confirm.lower() != 'y':
-            print("订单已取消")
-            return {'cancelled': True}
+        if not auto_confirm:
+            confirm = input(f"\n{Fore.YELLOW}确认下单? (y/N): {Style.RESET_ALL}")
+            if confirm.lower() != 'y':
+                print("订单已取消")
+                return {'cancelled': True}
         
         # 下单
         result = self.api.place_order(
@@ -45,8 +46,8 @@ class OptionTrader:
         
         return self._handle_order_result(result, "买入")
     
-    def sell_option(self, symbol: str, quantity: str, order_type: str = "Market", 
-                    price: str = None) -> Dict:
+    def sell_option(self, symbol: str, quantity: str, order_type: str = "Market",
+                    price: str = None, auto_confirm: bool = False) -> Dict:
         """卖出期权"""
         print(f"正在卖出期权 {symbol}...")
         print(f"数量: {quantity}")
@@ -56,10 +57,11 @@ class OptionTrader:
             print(f"限价: {price}")
         
         # 确认订单
-        confirm = input(f"\n{Fore.YELLOW}确认下单? (y/N): {Style.RESET_ALL}")
-        if confirm.lower() != 'y':
-            print("订单已取消")
-            return {'cancelled': True}
+        if not auto_confirm:
+            confirm = input(f"\n{Fore.YELLOW}确认下单? (y/N): {Style.RESET_ALL}")
+            if confirm.lower() != 'y':
+                print("订单已取消")
+                return {'cancelled': True}
         
         # 下单
         result = self.api.place_order(
@@ -74,31 +76,56 @@ class OptionTrader:
         return self._handle_order_result(result, "卖出")
     
     def _handle_order_result(self, result: Dict, action: str) -> Dict:
-        """处理订单结果"""
-        if result.get('retCode') == 0:
-            order_data = result.get('result', {})
-            order_id = order_data.get('orderId', '')
-            order_link_id = order_data.get('orderLinkId', '')
-            
-            print(f"\n{Fore.GREEN}✓ {action}订单提交成功!{Style.RESET_ALL}")
-            print(f"订单ID: {order_id}")
-            print(f"订单链接ID: {order_link_id}")
-            
-            return {
-                'success': True,
-                'order_id': order_id,
-                'order_link_id': order_link_id,
-                'result': order_data
-            }
+        """处理交易所响应，基于实际状态判断是否成交"""
+        ret_code = result.get('retCode')
+        ret_msg = result.get('retMsg')
+        order_data = result.get('result') or {}
+        order_status = order_data.get('orderStatus') or order_data.get('status')
+        result_summary = self._summarize_exchange_response(ret_code, ret_msg, order_status, order_data)
+
+        normalized_status = (order_status or "").lower()
+        success = bool(
+            ret_code == 0
+            and normalized_status not in {"cancelled", "rejected"}
+        )
+        if ret_code == 0 and not order_status:
+            success = True
+
+        if success:
+            print(f"\n{Fore.GREEN}✓ {action}交易所确认: {result_summary}{Style.RESET_ALL}")
         else:
-            error_msg = result.get('retMsg', '未知错误')
-            print(f"\n{Fore.RED}✗ {action}订单失败: {error_msg}{Style.RESET_ALL}")
-            
-            return {
-                'success': False,
-                'error': error_msg,
-                'result': result
+            failure_reason = result_summary or ret_msg or '交易所返回不成功状态'
+            print(f"\n{Fore.RED}✗ {action}执行失败: {failure_reason}{Style.RESET_ALL}")
+
+        return {
+            'success': success,
+            'error': None if success else (ret_msg or '交易未成交'),
+            'message': result_summary,
+            'order_id': order_data.get('orderId'),
+            'order_link_id': order_data.get('orderLinkId'),
+            'result': order_data,
+        }
+
+    @staticmethod
+    def _summarize_exchange_response(ret_code: Optional[int], ret_msg: Optional[str], order_status: Optional[str], order_data: Dict) -> str:
+        """构建基于交易所返回的简洁描述"""
+        parts = []
+        if order_status:
+            parts.append(f"状态={order_status}")
+        if ret_msg:
+            parts.append(f"信息={ret_msg}")
+        if ret_code not in (None, 0):
+            parts.append(f"retCode={ret_code}")
+
+        if not parts:
+            snapshot = {
+                k: order_data.get(k)
+                for k in ("orderStatus", "execStatus", "rejectReason", "retMsg")
+                if order_data.get(k) is not None
             }
+            if snapshot:
+                parts.append(", ".join(f"{k}={v}" for k, v in snapshot.items()))
+        return "，".join(parts) or "交易所未提供状态"
     
     def get_current_price(self, symbol: str) -> Optional[float]:
         """获取当前期权价格"""

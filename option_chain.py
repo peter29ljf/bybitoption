@@ -53,9 +53,18 @@ class OptionChain:
             
             ticker = ticker_dict.get(symbol, {})
             
+            # 从symbol中解析执行价格
+            strike_price = 0
+            try:
+                parts = symbol.split('-')
+                if len(parts) >= 3:
+                    strike_price = float(parts[2])
+            except (ValueError, IndexError):
+                strike_price = 0
+            
             chain_data.append({
                 'symbol': symbol,
-                'strike_price': float(instrument.get('strikePrice', 0)),
+                'strike_price': strike_price,
                 'option_type': instrument.get('optionsType', ''),
                 'expiry_date': instrument.get('deliveryTime', ''),
                 'bid_price': float(ticker.get('bid1Price', 0)),

@@ -1,200 +1,104 @@
-# Bybit 期权交易应用
+# Bybit 期权工具集
 
-这是一个基于 Bybit API 的期权交易应用程序，支持查看期权链、持仓信息和钱包余额。
+一个集命令行与 Web 界面于一体的 Bybit 期权交易助手。项目提供期权链查询、持仓/钱包洞察、策略配置、AI 辅助分析以及可选的价格监控子服务。
 
-## 功能特性
+## 功能亮点
+- **命令行工具**: 通过 `main.py` 快速查询期权链、持仓、钱包、订单历史以及情景分析。
+- **Web 控制台**: 友好的页面交互，支持期权搜索、关注列表、策略管理、AI 辅助解读和运行时配置管理。
+- **策略与设置管理**: 持久化 API 凭据、策略、交易纪录，支持 webhook 回调。
+- **本地缓存**: 自动缓存期权链数据与关注列表，减少重复请求。
+- **可选价格监控服务**: `price_monitor/` 提供 FastAPI + WebSocket 的实时价格触发器（独立安装依赖即可运行）。
 
-- 📊 **期权链查询**: 查看完整的期权链数据，包括价格、成交量、希腊字母等
-- 💼 **持仓管理**: 查看当前期权持仓和盈亏情况
-- 💰 **钱包信息**: 查看账户余额和各币种分布
-- 🎯 **灵活筛选**: 支持按到期日、执行价格范围等条件筛选
-- 🌈 **彩色显示**: 使用颜色区分盈亏状态，提升视觉体验
+## 环境准备
+- Python 3.10 及以上版本
+- pip 与 virtualenv（推荐）
 
-## 安装和配置
-
-### 1. 安装依赖
-
+## 安装步骤
 ```bash
-cd /root/option
+# 克隆项目
+git clone <your-repo-url>
+cd bybitoption
+
+# 创建并激活虚拟环境
+python3 -m venv venv
+source venv/bin/activate
+
+# 安装依赖
 pip install -r requirements.txt
-```
 
-### 2. 配置 API 密钥
-
-创建 `.env` 文件：
-
-```bash
+# 准备环境变量
 cp env_example.txt .env
+# 编辑 .env，填入 BYBIT_API_KEY / BYBIT_API_SECRET / BYBIT_TESTNET
 ```
 
-编辑 `.env` 文件，填入您的 Bybit API 密钥：
+> **提示**: 运行时会自动在 `cache/` 与 `data/` 目录写入缓存文件，这两个目录已默认忽略，不会出现在仓库中。
 
-```env
-BYBIT_API_KEY=your_api_key_here
-BYBIT_API_SECRET=your_api_secret_here
-BYBIT_TESTNET=true
-```
-
-**注意**: 
-- 在 [Bybit 官网](https://www.bybit.com) 申请 API 密钥
-- 建议先在测试网环境测试（BYBIT_TESTNET=true）
-- 生产环境请设置 BYBIT_TESTNET=false
-
-### 3. 权限配置
-
-给主程序添加执行权限：
-
+## 命令行用法
+在虚拟环境中执行：
 ```bash
-chmod +x main.py
+python main.py config-check         # 查看当前配置
+python main.py chain -b BTC         # 查询 BTC 期权链
+python main.py positions            # 查看持仓
+python main.py wallet               # 查看钱包余额
+python main.py orders --limit 20    # 最近订单
+python main.py scenario -s BTC-31OCT25-110000-C-USDT -t 110000
 ```
 
-## 使用方法
+常用选项：
+- `--testnet` 使用测试网
+- `--expiry` 过滤到期日（YYYY-MM-DD）
+- `--strike-min/--strike-max` 限定执行价范围
+- `buy`/`sell` 子命令在提交订单前会给出确认提示
 
-### 基本命令
+若喜欢交互式脚本，可运行 `./run.sh`，根据提示选择功能；`./run.sh web` 会直接启动网页端。
 
+## Web 应用
 ```bash
-# 查看帮助
-python main.py --help
-
-# 检查配置
-python main.py config-check
+source venv/bin/activate
+python app.py
+# 或 ./run.sh web
 ```
+默认监听 `http://localhost:8080`。首次打开需在“设置”页录入 API Key 与是否使用测试网；设置会自动持久化到 `settings_manager/data/settings.json`。
 
-### 期权链查询
+主要模块：
+- **期权搜索**: 支持按目标价格、到期日、方向筛选并缓存结果
+- **关注列表**: 将感兴趣的合约加入 watchlist，随时刷新
+- **策略中心**: 管理多层策略、Webhook、交易记录
+- **AI 助手**: 可配置第三方模型接口（默认占位配置，可自行扩展）
 
+## 价格监控服务（可选）
+`price_monitor/` 目录提供独立的 FastAPI 服务，用于实时监控期权价格并触发 Webhook。需要单独安装依赖：
 ```bash
-# 查看 BTC 期权链
-python main.py chain
+cd price_monitor
+pip install -r requirements.txt
+python run.py
+```
+更详细的接口说明参见 `price_monitor/README.md`。
 
-# 查看 ETH 期权链
-python main.py chain -b ETH
-
-# 查看指定执行价格范围的期权
-python main.py chain --strike-min 40000 --strike-max 50000
-
-# 只查看平值期权
-python main.py chain --atm-only
-
-# 查看可用的到期日
-python main.py expiries
+## 目录总览
+```
+bybitoption/
+├── app.py                # Flask Web 应用入口
+├── main.py               # CLI 主程序
+├── bybit_api.py          # Bybit REST 接口封装
+├── option_chain.py       # 期权链处理逻辑
+├── positions.py          # 持仓与钱包处理
+├── trading.py            # 下单与订单交互
+├── data_cache.py         # 期权链缓存管理
+├── ai_assistant.py       # AI 助手模块
+├── strategy_manager/     # 策略、Webhook 与存储逻辑
+├── settings_manager/     # 运行时设置管理与持久化
+├── templates/ & static/  # Web 前端资源
+├── price_monitor/        # 可选的价格监控服务
+├── run.sh                # 便捷启动脚本
+├── env_example.txt       # 环境变量示例
+└── requirements.txt      # 依赖列表
 ```
 
-### 持仓查询
-
-```bash
-# 查看所有期权持仓
-python main.py positions
-
-# 查看指定合约的持仓
-python main.py positions -s BTC-29DEC23-42000-C
-```
-
-### 钱包信息
-
-```bash
-# 查看钱包余额
-python main.py wallet
-
-# 查看账户摘要
-python main.py summary
-```
-
-## 命令详细说明
-
-### chain - 期权链查询
-
-**选项**:
-- `-b, --base-coin`: 基础币种 (BTC/ETH)，默认 BTC
-- `-e, --expiry`: 过滤特定到期日 (YYYY-MM-DD)
-- `--strike-min`: 最小执行价格
-- `--strike-max`: 最大执行价格
-- `--atm-only`: 只显示平值期权
-
-**示例**:
-```bash
-# 查看 BTC 12月29日到期的期权
-python main.py chain -e 2023-12-29
-
-# 查看执行价格在 40000-50000 之间的 BTC 期权
-python main.py chain --strike-min 40000 --strike-max 50000
-```
-
-### positions - 持仓查询
-
-**选项**:
-- `-s, --symbol`: 指定合约符号
-
-**显示信息**:
-- 合约名称
-- 持仓方向 (Buy/Sell)
-- 持仓数量
-- 平均成本价
-- 当前标记价格
-- 未实现盈亏
-- 收益率百分比
-- 杠杆倍数
-
-### wallet - 钱包信息
-
-**显示信息**:
-- 总权益
-- 钱包余额
-- 可用余额
-- 保证金使用情况
-- 各币种余额分布
-- 未实现盈亏
-
-## 数据说明
-
-### 期权链数据包含
-
-- **基础信息**: 合约符号、执行价格、期权类型、到期时间
-- **价格数据**: 买价、卖价、标记价格、最新成交价
-- **成交数据**: 24小时成交量、持仓量
-- **希腊字母**: Delta, Gamma, Theta, Vega
-- **隐含波动率**: 以百分比显示
-
-### 颜色标识
-
-- 🟢 **绿色**: 盈利状态
-- 🔴 **红色**: 亏损状态
-- 🔵 **蓝色**: 标题和重要信息
-- 🟡 **黄色**: 警告信息
-
-## 注意事项
-
-1. **API 限制**: 请遵守 Bybit API 的调用频率限制
-2. **网络连接**: 确保网络连接稳定，程序会自动重试失败的请求
-3. **数据延迟**: 市场数据可能有轻微延迟
-4. **风险提示**: 期权交易具有高风险，请谨慎操作
-
-## 故障排除
-
-### 常见问题
-
-**Q: 提示 "API 密钥未设置"**
-A: 请检查 `.env` 文件是否存在且配置正确
-
-**Q: 获取数据失败**
-A: 检查网络连接和 API 密钥权限
-
-**Q: 显示 "没有找到期权数据"**
-A: 可能是指定的币种或时间范围没有可用的期权合约
-
-### 调试模式
-
-如需调试，可以在代码中添加打印语句查看 API 返回的原始数据。
-
-## 扩展功能
-
-您可以基于现有框架添加更多功能：
-
-- 期权交易下单
-- 风险指标计算
-- 数据导出功能
-- 实时价格监控
-- 邮件/短信提醒
+## 常见问题
+- **缓存/关注列表在哪里？** 运行时会写入 `cache/` 与 `data/`，若需要重置可直接删除目录内容。
+- **为何提示缺少 API Key？** 请确认 `.env` 或设置页面已经填入有效的 Bybit API Key/Secret，并根据需要选择测试网或实盘。
+- **如何部署价格监控服务？** 参考 `price_monitor/README.md`，该服务可与主应用分开部署。
 
 ## 许可证
-
-本项目仅供学习和研究使用。使用时请遵守相关法律法规和交易所规则。
+项目遵循 `LICENSE` 所列条款，仅供学习与研究使用，实盘交易请谨慎操作。

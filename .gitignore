@@ -20,6 +20,7 @@ dist/
 .mypy_cache/
 .cache/
 *.log
+cache/
 
 # IDE / Editor
 .vscode/
@@ -35,3 +36,7 @@ dist/
 # Local overrides
 *.local
 
+data/
+price_monitor/active_tasks.json
+price_monitor/price_monitor.log
+price_monitor/service.out

@@ -27,3 +27,7 @@ class Config:
     # 默认期权合约设置
     DEFAULT_CATEGORY = 'option'
     DEFAULT_BASE_COIN = 'BTC'  # 支持 BTC, ETH
+
+    # 外部服务默认配置
+    PRICE_MONITOR_BASE = os.getenv('PRICE_MONITOR_BASE', 'http://localhost:8888')
+    STRATEGY_WEBHOOK_BASE = os.getenv('STRATEGY_WEBHOOK_BASE', 'http://localhost:8080')
