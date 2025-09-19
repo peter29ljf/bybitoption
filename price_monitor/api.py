@@ -78,6 +78,8 @@ class CreateMonitorTaskRequest(BaseModel):
     level_id: str = Field(..., description="Level ID")
     monitor_type: str = Field(..., description="监控类型: ENTRY/TAKE_PROFIT/STOP_LOSS")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="附加数据")
+    monitor_instrument: str = Field('option', description="监控标的类型: option 或 spot")
+    monitor_symbol: Optional[str] = Field(None, description="实际监控的symbol，option模式默认为期权符号")
     
     @validator('option_symbol')
     def validate_option_symbol(cls, v):
@@ -125,11 +127,30 @@ class CreateMonitorTaskRequest(BaseModel):
             raise ValueError(f"monitor_type 必须是 {allowed}")
         return v
 
+    @validator('monitor_instrument')
+    def validate_monitor_instrument(cls, v):
+        allowed = {'option', 'spot'}
+        if v not in allowed:
+            raise ValueError(f"monitor_instrument 必须是 {allowed}")
+        return v
+
+    @validator('monitor_symbol', always=True)
+    def ensure_monitor_symbol(cls, v, values):
+        instrument = values.get('monitor_instrument', 'option')
+        option_symbol = values.get('option_symbol')
+        if instrument == 'spot':
+            if not v:
+                raise ValueError("monitor_symbol 在 spot 模式下必填")
+            return v.upper()
+        return (v or option_symbol).upper()
+
 class TaskStatusResponse(BaseModel):
     """任务状态响应"""
     task_id: str
     status: str
     option_symbol: str
+    monitor_symbol: str
+    monitor_instrument: str
     target_price: float
     current_price: float = None
     created_at: str
@@ -225,7 +246,13 @@ async def create_monitor_task(request: CreateMonitorTaskRequest):
         
         # 解析期权信息
         option_info = _parse_option_symbol(request.option_symbol)
-        
+
+        if request.monitor_instrument == 'spot' and request.monitor_symbol != 'BTCUSDT':
+            raise HTTPException(
+                status_code=422,
+                detail="当前仅支持 BTCUSDT 现货价格监控"
+            )
+
         # 创建监控任务
         current_time = datetime.now()
         expires_at = current_time + timedelta(hours=request.timeout_hours)
@@ -233,6 +260,8 @@ async def create_monitor_task(request: CreateMonitorTaskRequest):
         task = MonitorTask(
             task_id=request.task_id,
             option_info=option_info,
+            monitor_symbol=request.monitor_symbol,
+            monitor_instrument=request.monitor_instrument,
             target_price=request.target_price,
             webhook_url=request.webhook_url,
             created_at=current_time,
@@ -260,6 +289,8 @@ async def create_monitor_task(request: CreateMonitorTaskRequest):
             data={
                 "task_id": request.task_id,
                 "option_symbol": request.option_symbol,
+                "monitor_symbol": request.monitor_symbol,
+                "monitor_instrument": request.monitor_instrument,
                 "target_price": request.target_price,
                 "expires_at": expires_at.isoformat()
             }
@@ -281,6 +312,8 @@ async def get_task_status(task_id: str):
                 task_id=snapshot_task["task_id"],
                 status=snapshot_task.get("status"),
                 option_symbol=snapshot_task.get("option_symbol"),
+                monitor_symbol=snapshot_task.get("monitor_symbol", snapshot_task.get("option_symbol")),
+                monitor_instrument=snapshot_task.get("monitor_instrument", "option"),
                 target_price=snapshot_task.get("target_price"),
                 current_price=snapshot_task.get("current_price"),
                 created_at=snapshot_task.get("created_at"),
@@ -302,6 +335,8 @@ async def get_task_status(task_id: str):
             task_id=task.task_id,
             status=task.status,
             option_symbol=task.option_info.symbol,
+            monitor_symbol=task.monitor_symbol,
+            monitor_instrument=task.monitor_instrument,
             target_price=task.target_price,
             current_price=task.current_price,
             created_at=task.created_at.isoformat(),

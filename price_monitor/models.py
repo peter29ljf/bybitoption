@@ -23,6 +23,7 @@ class MonitorTask:
     """监控任务"""
     task_id: str                    # 任务唯一编号
     option_info: OptionInfo         # 期权信息
+    monitor_symbol: str             # 实际监控的Symbol（期权或现货）
     target_price: float             # 目标价格
     webhook_url: str                # 接收webhook的网址
     created_at: datetime            # 创建时间
@@ -35,6 +36,7 @@ class MonitorTask:
     level_id: Optional[str] = None           # 关联level
     monitor_type: Optional[str] = None       # ENTRY/TAKE_PROFIT/STOP_LOSS
     metadata: Optional[Dict[str, Any]] = None
+    monitor_instrument: str = "option"  # 监控标的类型: option/spot
 
     def to_dict(self) -> Dict[str, Any]:
         result = asdict(self)
@@ -59,7 +61,11 @@ class MonitorTask:
         # 处理嵌套对象
         option_data = data.pop('option_info')
         data['option_info'] = OptionInfo(**option_data)
-        
+
+        # 兼容旧数据
+        data.setdefault('monitor_instrument', 'option')
+        data.setdefault('monitor_symbol', data['option_info'].symbol)
+
         return cls(**data)
 
 @dataclass
@@ -76,7 +82,9 @@ class WebhookData:
     level_id: Optional[str] = None
     monitor_type: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
-    
+    monitor_symbol: Optional[str] = None
+    monitor_instrument: Optional[str] = None
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 

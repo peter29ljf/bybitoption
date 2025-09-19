@@ -18,6 +18,8 @@ from .models import (
     MonitorType,
 )
 from .monitor_client import monitor_client
+
+BTC_SPOT_SYMBOL = "BTCUSDT"
 from .storage import storage
 
 logger = logging.getLogger(__name__)
@@ -297,6 +299,28 @@ class StrategyService:
                     },
                 })
                 level.status = LevelStatus.MONITORING
+            elif level.trigger_type == "btc_price" and level.trigger_price and not entry_executed:
+                spot_symbol = self._spot_symbol_for_level(level)
+                if not spot_symbol:
+                    logger.warning(
+                        "Level %s configured for btc_price trigger but option symbol %s is not BTC-based",
+                        level.level_id,
+                        level.option_symbol,
+                    )
+                    level.status = LevelStatus.PENDING
+                else:
+                    monitor_definitions.append({
+                        "monitor_type": MonitorType.ENTRY.value,
+                        "target_price": level.trigger_price,
+                        "metadata": {
+                            "side": level.side,
+                            "quantity": level.quantity,
+                            "trigger_basis": "btc_spot",
+                        },
+                        "instrument_type": "spot",
+                        "monitor_symbol": spot_symbol,
+                    })
+                    level.status = LevelStatus.MONITORING
             elif level.trigger_type == "immediate" and not entry_executed:
                 level.status = LevelStatus.MONITORING
                 self.executor.enqueue(
@@ -352,6 +376,13 @@ class StrategyService:
         strategy.updated_at = datetime.utcnow().isoformat() + "Z"
         storage.upsert_strategy(strategy)
         self._strategies[strategy.strategy_id] = strategy
+
+    @staticmethod
+    def _spot_symbol_for_level(level: StrategyLevel) -> Optional[str]:
+        symbol = (level.option_symbol or "").upper()
+        if symbol.startswith("BTC"):
+            return BTC_SPOT_SYMBOL
+        return None
 
     def _execute_level(self, task: ExecutionTask) -> Dict:
         if not self.app:

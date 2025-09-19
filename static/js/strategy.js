@@ -185,7 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (level.trigger_type === 'conditional') {
             const price = level.trigger_price ? level.trigger_price : '-';
-            return `条件 (${price})`;
+            return `期权价格 (${price})`;
+        }
+        if (level.trigger_type === 'btc_price') {
+            const price = level.trigger_price ? level.trigger_price : '-';
+            return `BTC现货 (${price})`;
         }
         if (level.trigger_type === 'existing_position') {
             return '使用现有仓位';
@@ -266,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         populateLinkedLevelOptions(linkedLevelSelect, currentLevelId, level ? level.trigger_level_id : null);
 
         const toggleTriggerFields = () => {
-            if (triggerTypeSelect.value === 'conditional') {
+            if (['conditional', 'btc_price'].includes(triggerTypeSelect.value)) {
                 triggerPriceGroup.classList.remove('d-none');
             } else {
                 triggerPriceGroup.classList.add('d-none');
@@ -429,13 +433,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const linkedLevelSelect = item.querySelector('.level-linked-level');
             const linkedEventSelect = item.querySelector('.level-linked-event');
 
+            if (triggerType === 'btc_price' && !symbol.startsWith('BTC')) {
+                showErrorToast('保存策略失败', `Level ${index + 1} 仅支持BTC合约使用BTC现货触发`);
+                valid = false;
+                return;
+            }
+
+            const needsTriggerPrice = triggerType === 'conditional' || triggerType === 'btc_price';
+            let triggerPriceValue = null;
+
+            if (needsTriggerPrice) {
+                const rawValue = triggerPriceInput.value;
+                if (!rawValue) {
+                    showErrorToast('保存策略失败', `Level ${index + 1} 请输入触发价格`);
+                    valid = false;
+                    return;
+                }
+                triggerPriceValue = Number(rawValue);
+                if (Number.isNaN(triggerPriceValue) || triggerPriceValue <= 0) {
+                    showErrorToast('保存策略失败', `Level ${index + 1} 触发价格必须大于0`);
+                    valid = false;
+                    return;
+                }
+            }
+
             const levelPayload = {
                 level_id: levelId,
                 option_symbol: symbol,
                 side: item.querySelector('.level-side').value,
                 quantity: item.querySelector('.level-quantity').value,
                 trigger_type: triggerType,
-                trigger_price: triggerType === 'conditional' ? parseFloat(triggerPriceInput.value || '0') || null : null,
+                trigger_price: needsTriggerPrice ? triggerPriceValue : null,
                 take_profit: takeProfitInput.value ? parseFloat(takeProfitInput.value) : null,
                 stop_loss: stopLossInput.value ? parseFloat(stopLossInput.value) : null,
                 trigger_level_id: triggerType === 'level_close' ? (linkedLevelSelect ? linkedLevelSelect.value : null) || null : null,

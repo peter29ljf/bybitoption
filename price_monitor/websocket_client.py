@@ -57,12 +57,15 @@ class BybitWebSocketClient:
         # 取消旧的订阅
         if self.subscribed_symbols:
             await self._unsubscribe_symbols(self.subscribed_symbols)
-        
+
         # 订阅新的符号
         if symbols:
             await self._subscribe_symbols(symbols)
             self.subscribed_symbols = symbols.copy()
             logger.info(f"已订阅 {len(symbols)} 个期权合约的价格数据")
+        else:
+            self.subscribed_symbols = set()
+            logger.info("已取消所有期权合约价格订阅")
     
     async def _subscribe_symbols(self, symbols: Set[str]):
         """订阅指定符号"""
@@ -195,5 +198,4 @@ class BybitWebSocketClient:
     def set_price_callback(self, callback: Callable[[PriceUpdate], None]):
         """设置价格更新回调函数"""
         self.price_callback = callback
-
 

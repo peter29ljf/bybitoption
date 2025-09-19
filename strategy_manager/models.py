@@ -69,7 +69,7 @@ class StrategyLevel:
     option_symbol: str
     side: str  # "buy" or "sell"
     quantity: str
-    trigger_type: str  # "immediate", "conditional", "level_close", "existing_position"
+    trigger_type: str  # "immediate", "conditional", "level_close", "existing_position", "btc_price"
     trigger_price: Optional[float]
     take_profit: Optional[float]
     stop_loss: Optional[float]
@@ -189,8 +189,8 @@ def validate_side(side: str) -> str:
 
 def validate_trigger_type(trigger_type: str) -> str:
     value = trigger_type.lower()
-    if value not in {"immediate", "conditional", "level_close", "existing_position"}:
+    if value not in {"immediate", "conditional", "level_close", "existing_position", "btc_price"}:
         raise ValueError(
-            "trigger_type must be 'immediate', 'conditional', 'level_close', or 'existing_position'"
+            "trigger_type must be 'immediate', 'conditional', 'level_close', 'existing_position', or 'btc_price'"
         )
     return value

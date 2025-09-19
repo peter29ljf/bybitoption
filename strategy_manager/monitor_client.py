@@ -60,12 +60,17 @@ class MonitorClient:
             target_price = definition["target_price"]
             task_id = f"strategy-{strategy_id}-{level_id}-{monitor_type.value}".lower()
 
+            monitor_instrument = definition.get("instrument_type", "option")
+            monitor_symbol = definition.get("monitor_symbol") or option_symbol
+
             payload = {
                 "task_id": task_id,
                 "strategy_id": strategy_id,
                 "level_id": level_id,
                 "monitor_type": monitor_type.value,
                 "option_symbol": option_symbol,
+                "monitor_instrument": monitor_instrument,
+                "monitor_symbol": monitor_symbol,
                 "target_price": target_price,
                 "webhook_url": webhook_url,
                 "metadata": definition.get("metadata", {}),

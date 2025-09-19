@@ -12,6 +12,7 @@ BYBIT_TESTNET=true
 # 监控任务配置
 MAX_MONITOR_TASKS=100
 TASK_TIMEOUT_HOURS=24
+SPOT_POLL_INTERVAL=1.5
 
 # Redis配置（可选）
 USE_REDIS=false
@@ -20,5 +21,4 @@ REDIS_URL=redis://localhost:6379/0
 # 日志配置
 LOG_LEVEL=INFO
 LOG_FILE=price_monitor.log
-
 

@@ -6,6 +6,7 @@
 
 - ✅ 实时监控期权价格（基于Bybit WebSocket）
 - ✅ 支持多个期权合约同时监控
+- ✅ 支持BTC现货价格触发，与期权监控共存
 - ✅ 价格达到目标时自动发送webhook通知
 - ✅ 任务超时自动清理
 - ✅ 支持Redis和内存存储
@@ -54,6 +55,8 @@ Content-Type: application/json
     "strategy_id": "strategy-1",
     "level_id": "level-1",
     "monitor_type": "ENTRY",
+    "monitor_instrument": "option",
+    "monitor_symbol": "BTC-17JAN25-100000-C-USDT",
     "metadata": {
         "side": "buy",
         "quantity": "1"
@@ -140,6 +143,7 @@ GET /health
 | REDIS_URL | redis://localhost:6379/0 | Redis连接URL |
 | LOG_LEVEL | INFO | 日志级别 |
 | LOG_FILE | price_monitor.log | 日志文件 |
+| SPOT_POLL_INTERVAL | 1.5 | 现货价格轮询间隔（秒） |
 
 ## 存储选项
 
@@ -193,3 +197,4 @@ GET /health
 3. 生产环境建议使用Redis存储
 4. 监控服务日志以及时发现问题
 5. 期权合约符号必须在Bybit交易所存在
+当需要基于BTC现货价格触发时，只需将 `monitor_instrument` 设置为 `spot`，并把 `monitor_symbol` 指定为 `BTCUSDT`（目前仅支持该现货符号），其余字段保持不变。
